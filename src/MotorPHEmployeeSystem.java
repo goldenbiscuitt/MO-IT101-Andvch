@@ -15,8 +15,11 @@ public class MotorPHEmployeeSystem {
         System.out.println("                         MOTOR PH PAYROLL SYSTEM                        ");
         System.out.println("========================================================================");
         
-        // Display all employees in the prescribed format
-        displayAllEmployees(employees);
+                // For demonstration, set sample weekly timesheet data
+        setWeeklyTimesheet(employees);
+        
+        // Display all employees with hours worked
+        displayEmployeesWithHoursWorked(employees);
     }
     
     /**
@@ -45,15 +48,59 @@ public class MotorPHEmployeeSystem {
     }
     
     /**
-     * Displays all employees in the prescribed format: employee number, employee name, birthday
+     * Sets sample timesheet data for each employee for demonstration purposes
+     * In a real application, this data would come from an actual timesheet system
+     * @param employees Array of Employee objects
+     */
+    private static void setWeeklyTimesheet(Employee[] employees) {
+        for (Employee emp : employees) {
+            if (emp != null) {
+                // Set clock-in and clock-out times for each day of the week
+                // Format: hour value in 24-hour format (e.g., 8.5 = 8:30 AM, 17.75 = 5:45 PM)
+                
+                // Monday
+                emp.setDailyTimesheet(0, 8.0, 17.0);  // 8:00 AM to 5:00 PM
+                
+                // Tuesday
+                emp.setDailyTimesheet(1, 8.0, 17.5);  // 8:00 AM to 5:30 PM
+                
+                // Wednesday
+                emp.setDailyTimesheet(2, 8.5, 17.0);  // 8:30 AM to 5:00 PM
+                
+                // Thursday
+                emp.setDailyTimesheet(3, 8.0, 18.0);  // 8:00 AM to 6:00 PM
+                
+                // Friday
+                emp.setDailyTimesheet(4, 8.0, 17.0);  // 8:00 AM to 5:00 PM
+                
+                // Calculate hours worked based on timesheet
+                emp.calculateHoursWorked();
+            }
+        }
+    }
+    
+    /**
+     * Displays employees with their calculated hours worked
      * @param employees Array of Employee objects to display
      */
-    private static void displayAllEmployees(Employee[] employees) {
+    private static void displayEmployeesWithHoursWorked(Employee[] employees) {
         for (Employee emp : employees) {
             if (emp != null) {
                 System.out.println("Employee Number: " + emp.getEmployeeId());
                 System.out.println("Employee Name: " + emp.getLastName() + ", " + emp.getFirstName());
                 System.out.println("Birthday: " + emp.getBirthday());
+                
+                // Show daily hours
+                System.out.println("Hours Worked This Week:");
+                System.out.printf("  Monday: %.2f hours\n", emp.getDailyHours(0));
+                System.out.printf("  Tuesday: %.2f hours\n", emp.getDailyHours(1));
+                System.out.printf("  Wednesday: %.2f hours\n", emp.getDailyHours(2));
+                System.out.printf("  Thursday: %.2f hours\n", emp.getDailyHours(3));
+                System.out.printf("  Friday: %.2f hours\n", emp.getDailyHours(4));
+                
+                // Show total hours worked
+                System.out.printf("Total Hours Worked: %.2f hours\n", emp.getTotalHoursWorked());
+                
                 System.out.println("------------------------------------------------------------------------");
             }
         }
@@ -61,7 +108,7 @@ public class MotorPHEmployeeSystem {
 }
 
 /**
- * Employee class to represent basic employee information
+ * Employee class to represent basic employee information and work hours
  */
 class Employee {
     private int employeeId;
@@ -69,6 +116,12 @@ class Employee {
     private String firstName;
     private String birthday;
     private double monthlySalary;
+    
+    // Arrays to store clock in and clock out times for each day (index 0-4 for Monday-Friday)
+    private double[] clockInTimes = new double[5];
+    private double[] clockOutTimes = new double[5];
+    private double[] dailyHours = new double[5];
+    private double totalHoursWorked;
     
     /**
      * Constructor for Employee class with basic information
@@ -79,6 +132,63 @@ class Employee {
         this.firstName = firstName;
         this.birthday = birthday;
         this.monthlySalary = monthlySalary;
+    }
+    
+    /**
+     * Set the clock in and clock out times for a specific day
+     * @param dayIndex Day index (0=Monday, 1=Tuesday, etc.)
+     * @param clockIn Clock in time in decimal hours (e.g., 8.5 = 8:30 AM)
+     * @param clockOut Clock out time in decimal hours (e.g., 17.5 = 5:30 PM)
+     */
+    public void setDailyTimesheet(int dayIndex, double clockIn, double clockOut) {
+        if (dayIndex >= 0 && dayIndex < 5) {
+            clockInTimes[dayIndex] = clockIn;
+            clockOutTimes[dayIndex] = clockOut;
+        }
+    }
+    
+    /**
+     * Calculates the hours worked for each day and the total for the week
+     */
+    public void calculateHoursWorked() {
+        totalHoursWorked = 0;
+        
+        for (int i = 0; i < 5; i++) {
+            // Calculate hours worked for this day (clock out time - clock in time)
+            // Deduct lunch break if workday is > 5 hours
+            double hoursWorked = clockOutTimes[i] - clockInTimes[i];
+            
+            // Deduct 1 hour lunch break if the employee worked more than 5 hours
+            if (hoursWorked > 5) {
+                hoursWorked -= 1;
+            }
+            
+            // Store the calculated hours for this day
+            dailyHours[i] = hoursWorked;
+            
+            // Add to the running total
+            totalHoursWorked += hoursWorked;
+        }
+    }
+    
+    /**
+     * Get the hours worked for a specific day
+     * @param dayIndex Day index (0=Monday, 1=Tuesday, etc.)
+     * @return Hours worked for that day
+     */
+    public double getDailyHours(int dayIndex) {
+        if (dayIndex >= 0 && dayIndex < 5) {
+            return dailyHours[dayIndex];
+        }
+        return 0;
+    }
+    
+    /**
+     * Get the total hours worked for the week
+     * @return Total hours worked
+     */
+    public double getTotalHoursWorked() {
+        return totalHoursWorked;
     }
     
     // Getters for basic employee information
