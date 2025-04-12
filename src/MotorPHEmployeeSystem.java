@@ -1,33 +1,118 @@
 /**
  * MotorPHEmployeeSystem.java
  *
- * In this code, we create a simple payroll system for Motor PH, calculating hours worked by employees in a week 
+ * This code creates a payroll system for Motor PH, calculating hours worked by employees 
  * and automatically calculating the pay based on the hours worked.
- * Added government deductions including SSS, PhilHealth, Pag-IBIG, and Withholding Tax.
+ * Government deductions include SSS, PhilHealth, Pag-IBIG, and Withholding Tax.
+ * 
+ * Enhancement: Added file handling to read employee data from a text file.
  */
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class MotorPHEmployeeSystem {
+    /**
+     * Main method to run the Motor PH payroll system
+     * @param args Command line arguments
+     */
     public static void main(String[] args) {
-        // Create employee database array with test data
-        Employee[] employees = initializeEmployeeDatabase();
-        
         // Display header
         System.out.println("========================================================================");
         System.out.println("                         MOTOR PH PAYROLL SYSTEM                        ");
         System.out.println("========================================================================");
-
-        // For demonstration, set sample weekly timesheet data
-        setWeeklyTimesheet(employees);
         
-        // Calculate weekly salary for all employees
-        calculateWeeklySalaries(employees);
-        
-        // Display weekly payroll report
-        displayWeeklyPayrollReport(employees);
+        try {
+            // Read employee data from text file
+            Employee[] employees = readEmployeesFromFile("Employee Data.txt");
+            
+            // For demonstration, set sample weekly timesheet data
+            setWeeklyTimesheet(employees);
+            
+            // Calculate weekly salary for all employees
+            calculateWeeklySalaries(employees);
+            
+            // Display weekly payroll report
+            displayWeeklyPayrollReport(employees);
+        } catch (IOException e) {
+            System.out.println("Error reading employee data: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     /**
-     * Initializes the employee database with test data
+     * Reads employee data from a text file
+     * Expected file format:
+     * employeeId,lastName,firstName,birthday,monthlySalary
+     * 
+     * Example:
+     * 10001,Garcia,Manuel III,10/11/1983,90000
+     * 10002,Lim,Antonio,06/19/1988,60000
+     * 
+     * @param filename The name of the text file to read
+     * @return Array of Employee objects with data from the file
+     * @throws IOException If there's an error reading the file
+     */
+    private static Employee[] readEmployeesFromFile(String filename) throws IOException {
+        List<Employee> employeeList = new ArrayList<>();
+        
+        // Open the file and read line by line
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            
+            // Read the header line (if present) and discard it
+            // Uncomment the next line if your file has a header
+            // reader.readLine();
+            
+            // Read each line and parse the employee data
+            while ((line = reader.readLine()) != null) {
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+                
+                // Split the line by comma
+                String[] data = line.split(",");
+                
+                // Validate data format
+                if (data.length < 5) {
+                    System.out.println("Warning: Invalid data format: " + line);
+                    continue;
+                }
+                
+                try {
+                    // Parse the data into Employee object
+                    int employeeId = Integer.parseInt(data[0].trim());
+                    String lastName = data[1].trim();
+                    String firstName = data[2].trim();
+                    String birthday = data[3].trim();
+                    double monthlySalary = Double.parseDouble(data[4].trim());
+                    
+                    // Create and add the employee to the list
+                    Employee employee = new Employee(employeeId, lastName, firstName, birthday, monthlySalary);
+                    employeeList.add(employee);
+                    
+                } catch (NumberFormatException e) {
+                    System.out.println("Warning: Invalid number format in line: " + line);
+                }
+            }
+        }
+        
+        // If no employees were read, provide fallback sample data
+        if (employeeList.isEmpty()) {
+            System.out.println("No valid employee data found in file. Using sample data.");
+            return initializeEmployeeDatabase();
+        }
+        
+        // Convert list to array and return
+        return employeeList.toArray(new Employee[0]);
+    }
+    
+    /**
+     * Initializes the employee database with test data (fallback if file reading fails)
      * @return Array of Employee objects with test data
      */
     private static Employee[] initializeEmployeeDatabase() {
@@ -118,7 +203,17 @@ public class MotorPHEmployeeSystem {
         System.out.println("========================================================================");
         
         // Display detailed information for one sample employee
-        Employee sampleEmployee = employees[0];
+        if (employees.length > 0) {
+            Employee sampleEmployee = employees[0];
+            displayDetailedCalculation(sampleEmployee);
+        }
+    }
+    
+    /**
+     * Displays detailed calculation for a single employee
+     * @param sampleEmployee The employee to display detailed information for
+     */
+    private static void displayDetailedCalculation(Employee sampleEmployee) {
         System.out.println("\nDETAILED CALCULATION (Sample - Employee ID: " + sampleEmployee.getEmployeeId() + ")");
         System.out.println("========================================================================");
         System.out.println("Employee: " + sampleEmployee.getLastName() + ", " + sampleEmployee.getFirstName());
@@ -299,157 +394,28 @@ class Employee {
     }
     
 private void calculateSSSContribution() {
-    // Calculate the salary range bracket (0-500, 500-1000, etc.)
-    int bracket = (int)(monthlySalary / 500);
-    
     // Handle the special case for salaries below 3250
     if (monthlySalary < 3250) {
         monthlySSS = 135.00;
-        return;
+        return; // Exit the method as the contribution is fixed for this range
     }
-    
-    // Adjust bracket to account for the starting point of 3250
-    bracket = bracket - 6;  // 3250/500 = 6.5, so start at bracket 6
-    
-    // Cap the bracket at the maximum salary range
-    if (bracket > 43) {
-        bracket = 43;  // Maximum bracket for salaries 24,750 and above
+
+    // Handle the case for salaries at or above 24750, which have a fixed maximum contribution
+    if (monthlySalary >= 24750) {
+        monthlySSS = 1125.00;
+        return; // Exit the method as the contribution is fixed for this range
     }
-    
-    // Use switch case to determine SSS contribution
-    switch (bracket) {
-        case 0:  // 3250-3749
-            monthlySSS = 157.50;
-            break;
-        case 1:  // 3750-4249
-            monthlySSS = 180.00;
-            break;
-        case 2:  // 4250-4749
-            monthlySSS = 202.50;
-            break;
-        case 3:  // 4750-5249
-            monthlySSS = 225.00;
-            break;
-        case 4:  // 5250-5749
-            monthlySSS = 247.50;
-            break;
-        case 5:  // 5750-6249
-            monthlySSS = 270.00;
-            break;
-        case 6:  // 6250-6749
-            monthlySSS = 292.50;
-            break;
-        case 7:  // 6750-7249
-            monthlySSS = 315.00;
-            break;
-        case 8:  // 7250-7749
-            monthlySSS = 337.50;
-            break;
-        case 9:  // 7750-8249
-            monthlySSS = 360.00;
-            break;
-        case 10: // 8250-8749
-            monthlySSS = 382.50;
-            break;
-        case 11: // 8750-9249
-            monthlySSS = 405.00;
-            break;
-        case 12: // 9250-9749
-            monthlySSS = 427.50;
-            break;
-        case 13: // 9750-10249
-            monthlySSS = 450.00;
-            break;
-        case 14: // 10250-10749
-            monthlySSS = 472.50;
-            break;
-        case 15: // 10750-11249
-            monthlySSS = 495.00;
-            break;
-        case 16: // 11250-11749
-            monthlySSS = 517.50;
-            break;
-        case 17: // 11750-12249
-            monthlySSS = 540.00;
-            break;
-        case 18: // 12250-12749
-            monthlySSS = 562.50;
-            break;
-        case 19: // 12750-13249
-            monthlySSS = 585.00;
-            break;
-        case 20: // 13250-13749
-            monthlySSS = 607.50;
-            break;
-        case 21: // 13750-14249
-            monthlySSS = 630.00;
-            break;
-        case 22: // 14250-14749
-            monthlySSS = 652.50;
-            break;
-        case 23: // 14750-15249
-            monthlySSS = 675.00;
-            break;
-        case 24: // 15250-15749
-            monthlySSS = 697.50;
-            break;
-        case 25: // 15750-16249
-            monthlySSS = 720.00;
-            break;
-        case 26: // 16250-16749
-            monthlySSS = 742.50;
-            break;
-        case 27: // 16750-17249
-            monthlySSS = 765.00;
-            break;
-        case 28: // 17250-17749
-            monthlySSS = 787.50;
-            break;
-        case 29: // 17750-18249
-            monthlySSS = 810.00;
-            break;
-        case 30: // 18250-18749
-            monthlySSS = 832.50;
-            break;
-        case 31: // 18750-19249
-            monthlySSS = 855.00;
-            break;
-        case 32: // 19250-19749
-            monthlySSS = 877.50;
-            break;
-        case 33: // 19750-20249
-            monthlySSS = 900.00;
-            break;
-        case 34: // 20250-20749
-            monthlySSS = 922.50;
-            break;
-        case 35: // 20750-21249
-            monthlySSS = 945.00;
-            break;
-        case 36: // 21250-21749
-            monthlySSS = 967.50;
-            break;
-        case 37: // 21750-22249
-            monthlySSS = 990.00;
-            break;
-        case 38: // 22250-22749
-            monthlySSS = 1012.50;
-            break;
-        case 39: // 22750-23249
-            monthlySSS = 1035.00;
-            break;
-        case 40: // 23250-23749
-            monthlySSS = 1057.50;
-            break;
-        case 41: // 23750-24249
-            monthlySSS = 1080.00;
-            break;
-        case 42: // 24250-24749
-            monthlySSS = 1102.50;
-            break;
-        default: // 24750 and above
-            monthlySSS = 1125.00;
-    }
+
+    // Calculate the bracket number for salaries between 3250 and 24749
+    // We subtract 3250 because the brackets effectively start from this value.
+    // We divide by 500 because each bracket has a width of 500.
+    // The (int) cast truncates the decimal part to get the integer bracket index.
+    int bracket = (int) ((monthlySalary - 3250) / 500);
+
+    // Calculate the monthly SSS contribution based on the bracket.
+    // The base contribution for the first bracket (3250-3749, which corresponds to bracket 0) is 157.50.
+    // Each subsequent bracket increases the contribution by a fixed amount of 22.50.
+    monthlySSS = 157.50 + (bracket * 22.50);
 }
 
     /**
